@@ -371,6 +371,58 @@ class SyntheticTrafficGenerator:
 
         return events
 
+    def generate_zero_day_bypass(self, session_id: Optional[str] = None) -> List[NetworkPacketEvent]:
+        """
+        Attack 6: Zero-Day Handshake Skip to Teardown (SYN -> FIN).
+        Strict FSM Violation: In SYN_SENT state, an unsolicited FIN packet arrives.
+        """
+        sid = session_id or f"atk_zd_{uuid.uuid4().hex[:6]}"
+        attacker_ip = "10.0.99.99"
+        curr_time = time.time()
+        delta1 = random.uniform(0.01, 0.03)
+        delta2 = random.uniform(0.01, 0.03)
+        src_port = random.randint(35000, 60000)
+
+        p1 = NetworkPacketEvent(
+            session_id=sid,
+            seq_index=0,
+            timestamp=curr_time + delta1,
+            delta_t=delta1,
+            src_ip=attacker_ip,
+            dst_ip=self.server_ip,
+            src_port=src_port,
+            dst_port=self.server_port,
+            event_type=EventType.SYN.value,
+            current_state=ProtocolState.CLOSED.value,
+            next_state=ProtocolState.SYN_SENT.value,
+            payload_size=0,
+            flags=["SYN"],
+            is_anomaly=0,
+            attack_category="Normal",
+            violation_type="NONE",
+        )
+
+        p2 = NetworkPacketEvent(
+            session_id=sid,
+            seq_index=1,
+            timestamp=curr_time + delta1 + delta2,
+            delta_t=delta2,
+            src_ip=attacker_ip,
+            dst_ip=self.server_ip,
+            src_port=src_port,
+            dst_port=self.server_port,
+            event_type=EventType.FIN.value,
+            current_state=ProtocolState.SYN_SENT.value,
+            next_state=ProtocolState.ERROR_STATE.value,
+            payload_size=0,
+            flags=["FIN"],
+            is_anomaly=1,
+            attack_category="ZeroDay_Handshake_Bypass",
+            violation_type="UNSEEN_TRANSITION_SEQUENCE",
+        )
+
+        return [p1, p2]
+
     def generate_dataset(
         self,
         normal_sessions_count: int = 500,

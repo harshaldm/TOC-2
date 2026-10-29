@@ -242,14 +242,7 @@ def generate_scenario_events(scenario_id: str):
     elif scenario_id == "slowloris":
         packets = generator.generate_slowloris_attack()
     elif scenario_id == "zero_day_bypass":
-        # Handshake Skip to Teardown: SYN -> FIN
-        packets = [
-            generator.generate_normal_session()[0],  # SYN
-            generator.generate_stealth_fin_scan()[0], # FIN
-        ]
-        packets[0].session_id = "zd_bypass_01"
-        packets[1].session_id = "zd_bypass_01"
-        packets[1].seq_index = 1
+        packets = generator.generate_zero_day_bypass()
     else:
         raise HTTPException(status_code=404, detail=f"Scenario '{scenario_id}' not found.")
 
@@ -354,6 +347,8 @@ async def websocket_traffic_stream(websocket: WebSocket):
                     pkts = generator.generate_syn_flood_attack(burst_size=8)
                 elif scenario_id == "slowloris":
                     pkts = generator.generate_slowloris_attack()
+                elif scenario_id == "zero_day_bypass":
+                    pkts = generator.generate_zero_day_bypass()
                 else:
                     pkts = generator.generate_normal_session()
 
